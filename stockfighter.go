@@ -53,25 +53,20 @@ type Venue struct {
 }
 
 func (v *Venue)Up()(bool, error) {
-  resp, err := http.Get(BaseURL + "/venues/" + v.Symbol + "/heartbeat")
+  apiURL := BaseURL + "/venues/" + v.Symbol + "/heartbeat"
+
+  dat := make(map[string]interface{})
+  err := SFGET(dat, apiURL)
+
   if err != nil {
-    return false, errors.New(err.Error())
+    return false, err
   }
-
-  body, _ := ioutil.ReadAll(resp.Body)
-  var dat map[string]interface{}
-  json.Unmarshal(body, &dat)
-  if (dat["ok"] != true) {
-    fmt.Println(dat["error"])
-    return false, errors.New("Stockfighter reports not ok.")
-  }
-
   return true, nil
 }
 
 type Stock struct {
-  Name    string `json:"name"`
   Symbol  string `json:"symbol"`
+  Name    string `json:"name"`
 }
 
 func (v *Venue)Stocks()([]Stock, error) {
@@ -84,25 +79,25 @@ func (v *Venue)Stocks()([]Stock, error) {
   stockMap := make(map[string]interface{})
   for _, value := range dat["symbols"].([]interface{}) {
     stockMap = value.(map[string]interface{})
-    stocks = append(stocks, Stock{stockMap["name"].(string), stockMap["symbol"].(string)})
+    stocks = append(stocks, Stock{stockMap["symbol"].(string), stockMap["name"].(string)})
   }
 
   return stocks, nil
 }
 
 // Returns unmarshaled JSON
-func SFGET(dat map[string]interface{}, apiURL string)(map[string]interface{}, error) {
+func SFGET(dat map[string]interface{}, apiURL string)(error) {
   resp, err := http.Get(apiURL)
   if err != nil {
     fmt.Println(err)
-    return nil, errors.New(err.Error())
+    return errors.New(err.Error())
   }
   body, _ := ioutil.ReadAll(resp.Body)
   json.Unmarshal(body, &dat)
   if (dat["ok"] != true) {
     fmt.Println(dat["error"])
-    return dat, errors.New("Stockfighter reports not ok.")
+    return errors.New("Stockfighter reports not ok.")
   }
 
-  return dat, nil
+  return nil
 }
