@@ -7,19 +7,20 @@ import (
   "io/ioutil"
   "bytes"
   "os"
+  "errors"
 )
 
 const BaseURL string = "https://api.stockfighter.io/ob/api"
 var apiKey string = os.Getenv("STOCKFIGHTER_API_KEY")
 
 type Order struct {
-  Account string `json:"accounts"`
-  Venue string `json:"venue"`
-  Symbol string `json:"symbol"`
-  Price uint `json:"price"`
-  Qty uint `json:"qty"`
-  Direction string `json:"direction"`
-  OrderType string `json:"orderType"`
+  Account     string `json:"accounts"`
+  Venue       string `json:"venue"`
+  Symbol      string `json:"symbol"`
+  Price       uint `json:"price"`
+  Qty         uint `json:"qty"`
+  Direction   string `json:"direction"`
+  OrderType   string `json:"orderType"`
 }
 
 func (o *Order)Execute()(error) {
@@ -51,11 +52,10 @@ type Venue struct {
   Symbol string `json:"venue"`
 }
 
-func (v *Venue)Up()(bool) {
-  fmt.Println(BaseURL + "/venues/" + v.Symbol + "/heartbeat")
+func (v *Venue)Up()(bool, error) {
   resp, err := http.Get(BaseURL + "/venues/" + v.Symbol + "/heartbeat")
   if err != nil {
-    return false
+    return false, errors.New(err.Error())
   }
 
   body, _ := ioutil.ReadAll(resp.Body)
@@ -63,8 +63,46 @@ func (v *Venue)Up()(bool) {
   json.Unmarshal(body, &dat)
   if (dat["ok"] != true) {
     fmt.Println(dat["error"])
-    return false
+    return false, errors.New("Stockfighter reports not ok.")
   }
 
-  return true
+  return true, nil
+}
+
+type Stock struct {
+  Name    string `json:"name"`
+  Symbol  string `json:"symbol"`
+}
+
+func (v *Venue)Stocks()([]Stock, error) {
+  stocks := make([]Stock, 0)
+  apiURL := BaseURL + "/venues/" + v.Symbol + "/stocks"
+
+  dat := make(map[string]interface{})
+  SFGET(dat, apiURL)
+
+  stockMap := make(map[string]interface{})
+  for _, value := range dat["symbols"].([]interface{}) {
+    stockMap = value.(map[string]interface{})
+    stocks = append(stocks, Stock{stockMap["name"].(string), stockMap["symbol"].(string)})
+  }
+
+  return stocks, nil
+}
+
+// Returns unmarshaled JSON
+func SFGET(dat map[string]interface{}, apiURL string)(map[string]interface{}, error) {
+  resp, err := http.Get(apiURL)
+  if err != nil {
+    fmt.Println(err)
+    return nil, errors.New(err.Error())
+  }
+  body, _ := ioutil.ReadAll(resp.Body)
+  json.Unmarshal(body, &dat)
+  if (dat["ok"] != true) {
+    fmt.Println(dat["error"])
+    return dat, errors.New("Stockfighter reports not ok.")
+  }
+
+  return dat, nil
 }
