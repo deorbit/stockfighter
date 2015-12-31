@@ -18,16 +18,22 @@ const BaseURL string = "https://api.stockfighter.io/ob/api"
 var apiKey string = os.Getenv("STOCKFIGHTER_API_KEY")
 
 type Order struct {
-  Account     string `json:"account"`
-  Venue       string `json:"venue"`
-  Symbol      string `json:"stock"`
-  Price       uint `json:"price"`
-  Qty         uint `json:"qty"`
-  Direction   string `json:"direction"`
-  OrderType   string `json:"orderType"`
+  Account     string  `json:"account"`
+  Venue       string  `json:"venue"`
+  Symbol      string  `json:"stock"`
+  Price       uint    `json:"price"`
+  Qty         uint    `json:"qty"`
+  Direction   string  `json:"direction"`
+  OrderType   string  `json:"orderType"`
 }
 
-func (o *Order)Execute()(error) {
+type Fill struct {
+  Price     float64       `json:"price"`
+  Qty       float64       `json:"qty"`
+  Timestamp time.Time `json:"ts"`
+}
+
+func (o *Order)Execute()([]Fill, error) {
   fmt.Println("Executing", o)
 
   orderJSON, _ := json.Marshal(o)
@@ -48,9 +54,25 @@ func (o *Order)Execute()(error) {
   fmt.Println("response Status:", resp.Status)
   fmt.Println("response Headers:", resp.Header)
   body, _ := ioutil.ReadAll(resp.Body)
-  fmt.Println("response Body:", string(body))
 
-  return nil
+  dat := make(map[string]interface{})
+  json.Unmarshal(body, &dat)
+  if dat["ok"] != true {
+    fmt.Println(dat["error"])
+    return nil, errors.New("Stockfighter reports not ok.")
+  }
+
+  fills := make([]Fill, 0)
+  for _, v := range dat["fills"].([]interface{}) {
+    f := v.(map[string]interface{})
+    ts, _ := time.Parse(time.RFC3339Nano, f["ts"].(string))
+    fill := Fill{f["price"].(float64),
+                 f["qty"].(float64),
+                 ts}
+    fills = append(fills, fill)
+  }
+
+  return fills, nil
 }
 
 type Venue struct {

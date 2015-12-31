@@ -4,6 +4,7 @@ import (
   "testing"
   "os"
   "time"
+  "fmt"
 )
 
 var knownVenue Venue = Venue{"TESTEX"}
@@ -47,7 +48,13 @@ func TestOrderExecuteMarketBuy(t *testing.T) {
             Direction: "buy",
             OrderType: "market",
            }
-  order.Execute()
+  fills, err := order.Execute()
+
+  if err != nil {
+    t.Error("Unknown error executing order.")
+  } else {
+    fmt.Printf("Filled:\n%s", fills)
+  }
 }
 
 func TestTicker(t *testing.T) {
