@@ -8,15 +8,19 @@ import (
   "bytes"
   "os"
   "errors"
+  "github.com/gorilla/websocket"
+  "log"
+  "os/signal"
+  "time"
 )
 
 const BaseURL string = "https://api.stockfighter.io/ob/api"
 var apiKey string = os.Getenv("STOCKFIGHTER_API_KEY")
 
 type Order struct {
-  Account     string `json:"accounts"`
+  Account     string `json:"account"`
   Venue       string `json:"venue"`
-  Symbol      string `json:"symbol"`
+  Symbol      string `json:"stock"`
   Price       uint `json:"price"`
   Qty         uint `json:"qty"`
   Direction   string `json:"direction"`
@@ -30,7 +34,8 @@ func (o *Order)Execute()(error) {
 
   fmt.Printf("%s", orderJSON)
 
-  req, err := http.NewRequest("POST", BaseURL, bytes.NewBuffer(orderJSON))
+  apiURL := BaseURL + "/venues/" + o.Venue + "/stocks/" + o.Symbol + "/orders"
+  req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(orderJSON))
   req.Header.Set("X-Starfighter-Authorization", apiKey)
   req.Header.Set("Content-Type", "application/json")
 
@@ -83,6 +88,55 @@ func (v *Venue)Stocks()([]Stock, error) {
   }
 
   return stocks, nil
+}
+
+func (v *Venue)Ticker(account string, waitForMessages time.Duration) {
+  log.SetFlags(0)
+
+  interrupt := make(chan os.Signal, 1) // channel to receive SIGs
+  signal.Notify(interrupt, os.Interrupt) // register channel to receive SIGINT
+
+  tickerURL := "wss://api.stockfighter.io/ob/api/ws/" + account + "/venues/" + v.Symbol + "/tickertape"
+
+  conn, _, err := websocket.DefaultDialer.Dial(tickerURL, nil)
+  if err != nil {
+    log.Fatal("dial:", err)
+  }
+  defer conn.Close()
+
+  wsListenStart := time.Now()
+  timeWaiting := time.Duration(0)
+  go func() {
+    defer conn.Close()
+    for {
+      _, message, err := conn.ReadMessage()
+      wsListenStart = time.Now()
+      if err != nil {
+        log.Println("read:", err)
+        return
+      }
+      log.Printf("recv: %s", message)
+    }
+  }()
+
+  ticker := time.NewTicker(time.Second)
+  defer ticker.Stop()
+
+  for {
+    select {
+    case t:= <-ticker.C:
+      timeWaiting = t.Sub(wsListenStart)
+      if timeWaiting > waitForMessages {
+        log.Println("Waited ", waitForMessages, " for messages. Forget that.")
+        return
+      }
+      log.Println(t.String())
+    case <-interrupt:
+      log.Println("interrupt")
+      conn.Close()
+      return
+    }
+  }
 }
 
 // Returns unmarshaled JSON

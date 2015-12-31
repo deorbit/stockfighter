@@ -3,10 +3,12 @@ package stockfighter
 import (
   "testing"
   "os"
+  "time"
 )
 
 var knownVenue Venue = Venue{"TESTEX"}
 var knownStock Stock = Stock{"FOOBAR", "Foreign Owned Occluded Bridge Architecture Resources"}
+var testAccount string = "EXB123456"
 
 func TestVenueUp(t *testing.T) {
   up, err := knownVenue.Up()
@@ -33,6 +35,23 @@ func TestVenueStocks(t *testing.T) {
   if len(stocks) > 0 && stocks[0].Symbol != knownStock.Symbol {
     t.Error(knownStock.Symbol + " not found on " + knownVenue.Symbol + ".")
   }
+}
+
+func TestOrderExecuteMarketBuy(t *testing.T) {
+  order := Order {
+            Account: testAccount,
+            Venue: knownVenue.Symbol,
+            Symbol: knownStock.Symbol,
+            Price: 900,
+            Qty: 10,
+            Direction: "buy",
+            OrderType: "market",
+           }
+  order.Execute()
+}
+
+func TestTicker(t *testing.T) {
+  knownVenue.Ticker(testAccount, time.Duration(10)*time.Second)
 }
 
 func setup() {
