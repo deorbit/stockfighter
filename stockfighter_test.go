@@ -20,6 +20,8 @@ func TestVenueUp(t *testing.T) {
   if err != nil {
     t.Error("Error testing Venue.Up():", err)
   }
+
+  fmt.Printf("%s is up!\n", knownVenue.Symbol)
 }
 
 func TestVenueStocks(t *testing.T) {
@@ -39,6 +41,8 @@ func TestVenueStocks(t *testing.T) {
 }
 
 func TestOrderExecuteMarketBuy(t *testing.T) {
+  fmt.Printf("\n*************** TestOrderExecuteMarketBuy ***************\n")
+
   order := Order {
             Account: testAccount,
             Venue: knownVenue.Symbol,
@@ -53,12 +57,74 @@ func TestOrderExecuteMarketBuy(t *testing.T) {
   if err != nil {
     t.Error("Unknown error executing order.")
   } else {
-    fmt.Printf("Filled:\n%s", fills)
+    fmt.Printf("Filled:\n%s\n%s\n", order.ID, fills)
   }
 }
 
-func TestTicker(t *testing.T) {
+func TestOrderCancel(t *testing.T) {
+  fmt.Printf("\n*************** TestOrderCancel ***************\n")
+
+  order := Order {
+            Account: testAccount,
+            Venue: knownVenue.Symbol,
+            Symbol: knownStock.Symbol,
+            Price: 900,
+            Qty: 10,
+            Direction: "buy",
+            OrderType: "market",
+           }
+  _, err := order.Execute()
+  fmt.Printf("Executed order %d.\n", order.ID)
+  cancelled, err := order.Cancel()
+
+  if !cancelled {
+    t.Error("Order was not cancelled.")
+  }
+
+  if err != nil {
+    t.Error("Error during cancellation.")
+  }
+
+  if cancelled {
+    fmt.Printf("Cancelled:\n%s", order.ID)
+  }
+}
+
+func TestVenueTicker(t *testing.T) {
+  fmt.Printf("\n*************** TestVenueTicker ***************\n")
+  order := Order {
+            Account: testAccount,
+            Venue: knownVenue.Symbol,
+            Symbol: knownStock.Symbol,
+            Price: 900,
+            Qty: 10,
+            Direction: "buy",
+            OrderType: "market",
+           }
+  fills := make([]Fill, 0)
+  var id int64
+  var err error = nil
+  go func() {
+    time.Sleep(5*time.Second)
+    fills, err = order.Execute()
+    if err != nil {
+      t.Error("Unknown error executing order.")
+    } else {
+      fmt.Printf("Filled:\n%s\n", id, fills)
+    }
+  }()
+  defer fmt.Println(fills)
   knownVenue.Ticker(testAccount, time.Duration(10)*time.Second)
+}
+
+func TestVenueExecutions(t *testing.T) {
+  fmt.Printf("\n*************** TestVenueExecutions ***************\n")
+  knownVenue.Executions(testAccount, time.Duration(10)*time.Second)
+}
+
+func TestVenueOrderBook(t *testing.T) {
+  fmt.Printf("\n*************** TestVenueOrderBook ***************\n")
+  knownVenue.OrderBook(&knownStock)
 }
 
 func setup() {
