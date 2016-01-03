@@ -192,7 +192,6 @@ func WebsocketRead(wsURL string, waitForMessages time.Duration, c chan<- []byte)
         return
       }
       c <- message
-      log.Printf("WS: %s", message)
     }
   }()
 
@@ -224,8 +223,23 @@ func (v *Venue)TickerForStock(account string, stock string, waitForMessages time
   c := make(chan []byte)
   go WebsocketRead(tickerURL, waitForMessages, c)
 
-  for quote := range c {
-    fmt.Printf("%s", quote)
+  for quoteRaw := range c {
+    dat := make(map[string]interface{})
+    json.Unmarshal(quoteRaw, &dat)
+    quote := dat["quote"].(map[string]interface{})
+    fmt.Printf("%s\tBID%8.0f\tASK%8.0f\tBIDSIZE%8.0f\tASKSIZE%8.0f\tBIDDEPTH%8.0f\tASKDEPTH%8.0f\tLAST%8.0f\tLASTSIZE%8.0f\tTRADE%s\tQUOTE%s\n",
+        quote["symbol"],
+        quote["bid"],
+        quote["ask"],
+        quote["bidSize"],
+        quote["askSize"],
+        quote["bidDepth"],
+        quote["askDepth"],
+        quote["last"],
+        quote["lastSize"],
+        quote["lastTrade"],
+        quote["quoteTime"],
+      )
   }
 }
 
