@@ -166,7 +166,7 @@ func (v *Venue)OrderBook(stock *Stock)(error) {
 // WebSocketRead listens to the specified websocket and prints received
 // messages. If no messages are received within waitForMessages duration,
 // the socket connection is closed.
-func WebsocketRead(wsURL string, waitForMessages time.Duration) {
+func WebsocketRead(wsURL string, waitForMessages time.Duration, c chan<- []byte) {
   log.SetFlags(0)
 
   interrupt := make(chan os.Signal, 1) // channel to receive SIGs
@@ -188,8 +188,10 @@ func WebsocketRead(wsURL string, waitForMessages time.Duration) {
       wsListenStart = time.Now()
       if err != nil {
         log.Println("read:", err)
+        close(c)
         return
       }
+      c <- message
       log.Printf("WS: %s", message)
     }
   }()
@@ -214,15 +216,31 @@ func WebsocketRead(wsURL string, waitForMessages time.Duration) {
 }
 
 // Ticker streams Stock quotes from a Venue to stdout.
+func (v *Venue)TickerForStock(account string, stock string, waitForMessages time.Duration) {
+  tickerURL := "wss://api.stockfighter.io/ob/api/ws/" + account +
+               "/venues/" + v.Symbol + "/tickertape/" +
+               "stocks/" + stock
+  fmt.Println(tickerURL)
+  c := make(chan []byte)
+  go WebsocketRead(tickerURL, waitForMessages, c)
+
+  for quote := range c {
+    fmt.Printf("%s", quote)
+  }
+}
+
+// Ticker streams Stock quotes from a Venue to stdout.
 func (v *Venue)Ticker(account string, waitForMessages time.Duration) {
   tickerURL := "wss://api.stockfighter.io/ob/api/ws/" + account + "/venues/" + v.Symbol + "/tickertape"
-  WebsocketRead(tickerURL, waitForMessages)
+  c := make(chan []byte)
+  WebsocketRead(tickerURL, waitForMessages, c)
 }
 
 // Executions streams all filled orders for a venue to stdout.
 func (v *Venue)Executions(account string, waitForMessages time.Duration) {
   tickerURL := "wss://api.stockfighter.io/ob/api/ws/" + account + "/venues/" + v.Symbol + "/executions"
-  WebsocketRead(tickerURL, waitForMessages)
+  c := make(chan []byte)
+  WebsocketRead(tickerURL, waitForMessages, c)
 }
 
 // SFGET connects to GETtable Stockfighter endpoints and unmarshals the
