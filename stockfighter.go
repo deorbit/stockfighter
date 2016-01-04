@@ -148,19 +148,41 @@ func (v *Venue)Stocks()([]Stock, error) {
   return stocks, nil
 }
 
+type BidAsk struct {
+  Price float64     `json:"price"`
+  Qty   float64     `json:"qty"`
+  IsBuy bool        `json:"isBuy"`
+}
+
+type OrderBook struct {
+  OK      bool      `json:"ok"`
+  Venue   string    `json:"venue"`
+  Symbol  string    `json:"symbol"`
+  Bids    []BidAsk  `json:"bids"`
+  Asks    []BidAsk  `json:"asks"`
+  Time    string    `json:"ts"`
+}
+
 // OrderBook shows all bids/asks for a Stockfighter Venue.
-func (v *Venue)OrderBook(stock *Stock)(error) {
+func (v *Venue)OrderBook(stock Stock)(OrderBook, error) {
   apiURL := BaseURL + "/venues/" + v.Symbol + "/stocks/" + stock.Symbol
 
-  dat := make(map[string]interface{})
-  err := SFGET(dat, apiURL)
+  book := OrderBook{}
 
-  fmt.Println(dat)
+  resp, err := http.Get(apiURL)
   if err != nil {
-    return err
+    fmt.Println(err)
+    return book,errors.New(err.Error())
+  }
+  body, _ := ioutil.ReadAll(resp.Body)
+
+  json.Unmarshal(body, &book)
+
+  if err != nil {
+    return book, err
   }
 
-  return nil
+  return book, nil
 }
 
 // WebSocketRead listens to the specified websocket and prints received
