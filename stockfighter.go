@@ -53,6 +53,14 @@ func StartLevel(levelName string) *LevelInfo {
   return &levelInfo
 }
 
+func (l *LevelInfo)Restart() *LevelInfo {
+  levelInfo := LevelInfo{}
+  respBody := SFPOST(BaseGMURL + "/instances/" + strconv.FormatInt(l.InstanceId, 10) + "/restart", nil)
+  json.Unmarshal(respBody, &levelInfo)
+
+  return &levelInfo
+}
+
 func SFPOST(url string, dataJSON []byte)([]byte) {
   req, err := http.NewRequest("POST", url, bytes.NewBuffer(dataJSON))
   req.Header.Set("X-Starfighter-Authorization", apiKey)
@@ -145,12 +153,10 @@ func (o *Order)Execute()(*ExecutedOrder, error) {
   executedOrder := ExecutedOrder{}
   orderJSON, err := json.Marshal(o)
   respBody := SFPOST(BaseURL + "/venues/" + o.Venue + "/stocks/" + o.Symbol + "/orders", bytes.NewBuffer(orderJSON).Bytes())
-  fmt.Printf("%s",respBody)
   err = json.Unmarshal(respBody, &executedOrder)
   if err != nil {
     fmt.Println("error unmarshalling: ", err)
   }
-  fmt.Println(executedOrder)
   return &executedOrder, err
 }
 
@@ -395,7 +401,11 @@ func (v *Venue)Executions(account string, waitForMessages time.Duration) {
 // SFGET connects to GETtable Stockfighter endpoints and unmarshals the
 // JSON response into a map.
 func SFGET(apiURL string)([]byte, error) {
-  resp, err := http.Get(apiURL)
+  req, err := http.NewRequest("GET", apiURL, nil)
+  req.Header.Set("X-Starfighter-Authorization", apiKey)
+  client := &http.Client{}
+
+  resp, err := client.Do(req)
   if err != nil {
     fmt.Println(err)
     return nil, errors.New(err.Error())
