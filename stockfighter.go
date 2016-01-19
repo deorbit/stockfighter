@@ -37,6 +37,7 @@ type LevelInfo struct {
   Balances      map[string]int64  `json:"balances"`
 }
 
+// LevelInstructions holds a narrative description of the level.
 type LevelInstructions struct {
   Instructions  string  `json:"Instructions"`
   OrderTypes    string  `json:Order Types`
