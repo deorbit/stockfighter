@@ -28,7 +28,8 @@ CREATE TABLE IF NOT EXISTS quotes (
 
 func MakeTables() {
   fmt.Printf("Makin' Tables...")
-  db, err := sqlx.Connect("postgres", "user=anh dbname=stockfighter sslmode=disable")
+  dbuser := os.Getenv("STOCKFIGHTERDBUSER")
+  db, err := sqlx.Connect("postgres", "user=" + dbuser + " dbname=stockfighter sslmode=disable")
   if err != nil {
     log.Fatalln(err)
   }
@@ -40,7 +41,8 @@ func MakeTables() {
 }
 
 func StoreQuote(q stockfighter.Quote) {
-  db, err := sqlx.Connect("postgres", "user=anh dbname=stockfighter sslmode=disable")
+  dbuser := os.Getenv("STOCKFIGHTERDBUSER")
+  db, err := sqlx.Connect("postgres", "user=" + dbuser + " dbname=stockfighter sslmode=disable")
   if err != nil {
     log.Fatalln(err)
   }
