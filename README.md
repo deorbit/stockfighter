@@ -1,1 +1,1 @@
-This is a client for Starighters.io's Stockfighter game.
+This is an API integration for Starighters.io's Stockfighter game.
