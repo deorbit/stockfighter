@@ -299,7 +299,7 @@ type TickerResponse struct {
   Q     Quote     `json:"quote"`
 }
 
-// Ticker streams Stock quotes from a Venue to stdout.
+// TickerForStock streams quotes for a single stock in a Venue to stdout.
 func (v *Venue)TickerForStock(account string, stock string, waitForMessages time.Duration) {
   tickerURL := "wss://api.stockfighter.io/ob/api/ws/" + account + "/venues/" + v.Symbol + "/tickertape/" + "stocks/" + stock
   c := make(chan []byte)
